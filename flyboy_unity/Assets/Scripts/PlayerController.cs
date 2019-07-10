@@ -27,6 +27,11 @@ public class PlayerController : MonoBehaviour
     public float softFallDrag;
     public float softFallHorizontalDrag;
 
+    // FLYING
+    private float jumpHeldTime;
+    private bool jumping;
+    private bool flying;
+    public float liftForce;
 
     private void Start()
     {
@@ -36,21 +41,19 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        if (Jumping() && isGrounded == true)
-        {
-            rigidBody.velocity = Vector2.up * jumpForce;
-        }
+        JumpController();
     }
 
     private void FixedUpdate()
     {
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, whatIsGround);
 
-        SoftLandController();
+        //SoftLandController();
 
         // Right arrow =  1
         // Left arrow  = -1
         moveInput = Input.GetAxis("Horizontal");
+
         rigidBody.velocity = new Vector2(moveInput * speed, rigidBody.velocity.y);
 
         if(facingRight == false && moveInput > 0)
@@ -59,6 +62,9 @@ public class PlayerController : MonoBehaviour
         } else if(facingRight == true && moveInput < 0) {
             Flip();
         }
+
+        AnimationController(moveInput, isGrounded);
+        FlyController();
 
     }
 
@@ -80,17 +86,79 @@ public class PlayerController : MonoBehaviour
 
     }
 
-    private bool Jumping()
-    {
-        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.Space)) {return true;}
-        else { return false; }
+    private void JumpController()
+    { 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {   
+            if (isGrounded){ rigidBody.velocity = Vector2.up * jumpForce; }
+            jumping = true;
+        }
+
+        if (Input.GetKeyUp(KeyCode.Space)) 
+        { 
+            jumping = false;
+        }
+
+
     }
+
+    private void FlyController()
+    {
+
+        if (jumping) { jumpHeldTime += Time.deltaTime; }
+
+        if (jumpHeldTime > 0.5) { flying = true; }
+
+        if (isGrounded)
+        {
+            jumpHeldTime = 0;
+            flying = false;
+        }
+
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            jumpHeldTime = 0;
+            flying = false;
+        }
+
+        if(flying)
+        {
+            float hSpeed = rigidBody.velocity.x;
+            hSpeed = Mathf.Abs(hSpeed);
+            float lift = hSpeed * liftForce;
+            rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
+        }
+
+    }
+
     void Flip()
     {
         facingRight = !facingRight;
         Vector3 playerLocalScaler = transform.localScale;
         playerLocalScaler.x *= -1;
         transform.localScale = playerLocalScaler;
+    }
+
+    void AnimationController(float movement, bool grounded)
+    {
+        // Walk
+        animator.SetBool("onGround", grounded);
+        if (movement > 0 ||  movement < 0)
+        {
+            animator.SetBool("moving", true);
+        }
+        else { animator.SetBool("moving", false); }
+
+        // Fall
+        if (rigidBody.velocity.y < -0.1)
+        { 
+            animator.SetBool("falling", true);
+        }
+        else { animator.SetBool("falling", false); }
+
+        if (flying) { animator.SetBool("flying", true); }
+        else { animator.SetBool("flying", false); }
+
     }
 
 }
