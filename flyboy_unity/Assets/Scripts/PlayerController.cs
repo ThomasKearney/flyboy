@@ -7,9 +7,10 @@ public class PlayerController : MonoBehaviour
     // BASIC
     public float speedInput;
     public Animator animator;
-    //
+    private float distToGround;
     public float speed;
     public float jumpForce;
+    public CapsuleCollider2D playerCollider;
     private float moveInput;
 
     private Rigidbody2D rigidBody;
@@ -37,6 +38,7 @@ public class PlayerController : MonoBehaviour
     {
         speed = speedInput;
         rigidBody = GetComponent<Rigidbody2D>();
+        distToGround = playerCollider.bounds.extents.y;
     }
 
     private void Update()
@@ -46,6 +48,7 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
+        // Check if the player is on the ground
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, whatIsGround);
 
         //SoftLandController();
@@ -54,16 +57,10 @@ public class PlayerController : MonoBehaviour
         // Left arrow  = -1
         moveInput = Input.GetAxis("Horizontal");
 
-        rigidBody.velocity = new Vector2(moveInput * speed, rigidBody.velocity.y);
+        WalkController();
 
-        if(facingRight == false && moveInput > 0)
-        {
-            Flip();
-        } else if(facingRight == true && moveInput < 0) {
-            Flip();
-        }
+        AnimationController();
 
-        AnimationController(moveInput, isGrounded);
         FlyController();
 
     }
@@ -87,13 +84,16 @@ public class PlayerController : MonoBehaviour
     }
 
     private void JumpController()
-    { 
+    {
+        // Jump if spacebar is hit
         if (Input.GetKeyDown(KeyCode.Space))
-        {   
+        {
+            // Add force if we're on the ground
             if (isGrounded){ rigidBody.velocity = Vector2.up * jumpForce; }
             jumping = true;
         }
 
+        // Set our jumping state to false when spacebar is let go
         if (Input.GetKeyUp(KeyCode.Space)) 
         { 
             jumping = false;
@@ -104,28 +104,28 @@ public class PlayerController : MonoBehaviour
 
     private void FlyController()
     {
-
+        // Start a timer to see how long we've been jumping for
         if (jumping) { jumpHeldTime += Time.deltaTime; }
 
+        // If we jump for over half a second then start flying state
         if (jumpHeldTime > 0.5) { flying = true; }
 
-        if (isGrounded)
+        // Reset when player hits the ground or lets go of space
+        if (isGrounded || Input.GetKeyUp(KeyCode.Space))
         {
             jumpHeldTime = 0;
             flying = false;
         }
 
-        if (Input.GetKeyUp(KeyCode.Space))
-        {
-            jumpHeldTime = 0;
-            flying = false;
-        }
-
+        
         if(flying)
         {
-            float hSpeed = rigidBody.velocity.x;
-            hSpeed = Mathf.Abs(hSpeed);
-            float lift = hSpeed * liftForce;
+            // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
+            float horizontalSpeed = rigidBody.velocity.x;
+            horizontalSpeed = Mathf.Abs(horizontalSpeed);
+            float lift = horizontalSpeed * liftForce;
+
+            // Apply life force
             rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
         }
 
@@ -139,11 +139,11 @@ public class PlayerController : MonoBehaviour
         transform.localScale = playerLocalScaler;
     }
 
-    void AnimationController(float movement, bool grounded)
+    void AnimationController()
     {
         // Walk
-        animator.SetBool("onGround", grounded);
-        if (movement > 0 ||  movement < 0)
+        animator.SetBool("onGround", isGrounded);
+        if (moveInput > 0 || moveInput < 0)
         {
             animator.SetBool("moving", true);
         }
@@ -158,7 +158,20 @@ public class PlayerController : MonoBehaviour
 
         if (flying) { animator.SetBool("flying", true); }
         else { animator.SetBool("flying", false); }
+    }
 
+    void WalkController()
+    {
+        // Multiply a hardcoded speed by move input and set the horizontal speed to it
+        // If we're flying we don't want to apply this force
+        if (!flying)
+        {
+            rigidBody.velocity = new Vector2(moveInput * speed, rigidBody.velocity.y);
+
+            // Turn player in the right direction
+            if (facingRight == false && moveInput > 0) { Flip(); }
+            else if (facingRight == true && moveInput < 0) { Flip(); }
+        }
     }
 
 }
