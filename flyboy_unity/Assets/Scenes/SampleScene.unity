@@ -177,6 +177,7 @@ MonoBehaviour:
   speedInput: 10
   animator: {fileID: 18682144}
   speed: 0
+  playerCollider: {fileID: 18682145}
   jumpForce: 5
   isGrounded: 0
   groundCheck: {fileID: 834598501}
@@ -186,7 +187,7 @@ MonoBehaviour:
     m_Bits: 256
   softFallDrag: 10
   softFallHorizontalDrag: 2
-  liftForce: 0.05
+  liftForce: 0.02
 --- !u!212 &18682142
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -282,8 +283,8 @@ CapsuleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0.025226396, y: -0.22199042}
-  m_Size: {x: 1.1112722, y: 2.7560189}
+  m_Offset: {x: 0.18327866, y: -0.21176836}
+  m_Size: {x: 1.4273767, y: 2.7355747}
   m_Direction: 0
 --- !u!1 &370990793
 GameObject:
@@ -437,7 +438,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 834598500}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3.361305, y: -1.9414814, z: -45.2006}
+  m_LocalPosition: {x: 0.01, y: -1.63, z: -45.2006}
   m_LocalScale: {x: 2.2421525, y: 2.2421525, z: 2.2421525}
   m_Children: []
   m_Father: {fileID: 18682143}

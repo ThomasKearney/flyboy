@@ -9,9 +9,13 @@ public class PlayerController : MonoBehaviour
     public Animator animator;
     private float distToGround;
     public float speed;
-    public float jumpForce;
     public CapsuleCollider2D playerCollider;
     private float moveInput;
+
+    // JUMPING
+    float fallMultiplier = 2.5f;
+    float lowJumpMultiplier = 2f;
+    public float jumpForce;
 
     private Rigidbody2D rigidBody;
 
@@ -48,8 +52,7 @@ public class PlayerController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        // Check if the player is on the ground
-        isGrounded = Physics2D.OverlapCircle(groundCheck.position, checkRadius, whatIsGround);
+        CheckIfGrounded();
 
         //SoftLandController();
 
@@ -85,6 +88,23 @@ public class PlayerController : MonoBehaviour
 
     private void JumpController()
     {
+
+
+        //faster falling
+        if (rigidBody.velocity.y < 0)
+        {
+            rigidBody.velocity += Vector2.up* Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+        }
+
+        //control jump height by length of time jump button held
+        if (rigidBody.velocity.y > 0 && !Input.GetKeyDown(KeyCode.Space))
+        {
+            rigidBody.velocity += Vector2.up* Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+        }
+
+
+
+
         // Jump if spacebar is hit
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -174,4 +194,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void CheckIfGrounded()
+    {
+        Vector2 leftCorner = new Vector2(transform.position.x - 0.5f, transform.position.y - 0.5f);
+        Vector2 rightCorner = new Vector2(transform.position.x + 0.5f, transform.position.y - 0.73f);
+        isGrounded = Physics2D.OverlapArea(leftCorner, rightCorner, whatIsGround);
+    }
 }
