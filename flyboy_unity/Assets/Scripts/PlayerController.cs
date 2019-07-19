@@ -37,6 +37,8 @@ public class PlayerController : MonoBehaviour
     private bool jumping;
     private bool flying;
     public float liftForce;
+    private bool flyUp;
+    private bool flyDown;
 
     private void Start()
     {
@@ -91,16 +93,20 @@ public class PlayerController : MonoBehaviour
 
 
         //faster falling
-        if (rigidBody.velocity.y < 0)
+        if (!flying)
         {
-            rigidBody.velocity += Vector2.up* Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
-        }
+            if (rigidBody.velocity.y < 0)
+            {
+                rigidBody.velocity += Vector2.up * Physics.gravity.y * (fallMultiplier - 1) * Time.deltaTime;
+            }
 
-        //control jump height by length of time jump button held
-        if (rigidBody.velocity.y > 0 && !Input.GetKeyDown(KeyCode.Space))
-        {
-            rigidBody.velocity += Vector2.up* Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+            //control jump height by length of time jump button held
+            if (rigidBody.velocity.y > 0 && !Input.GetKeyDown(KeyCode.Space))
+            {
+                rigidBody.velocity += Vector2.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
+            }
         }
+        
 
 
 
@@ -128,7 +134,7 @@ public class PlayerController : MonoBehaviour
         if (jumping) { jumpHeldTime += Time.deltaTime; }
 
         // If we jump for over half a second then start flying state
-        if (jumpHeldTime > 0.5) { flying = true; }
+        if (jumpHeldTime > 0.45) { flying = true; }
 
         // Reset when player hits the ground or lets go of space
         if (isGrounded || Input.GetKeyUp(KeyCode.Space))
@@ -147,6 +153,15 @@ public class PlayerController : MonoBehaviour
 
             // Apply life force
             rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
+
+            if (Input.GetKeyDown(KeyCode.W)) { flyUp   = true; }
+            if (Input.GetKeyUp(KeyCode.W))   { flyUp   = false; }
+            if (Input.GetKeyDown(KeyCode.S)) { flyDown = true; }
+            if (Input.GetKeyUp(KeyCode.S))   { flyDown = false; }
+        }
+        else
+        {
+            flyDown = flyUp = false;
         }
 
     }
@@ -176,8 +191,10 @@ public class PlayerController : MonoBehaviour
         }
         else { animator.SetBool("falling", false); }
 
-        if (flying) { animator.SetBool("flying", true); }
-        else { animator.SetBool("flying", false); }
+        animator.SetBool("flying", flying);
+        animator.SetBool("flyUp", flyUp);
+        animator.SetBool("flyDown", flyDown);
+
     }
 
     void WalkController()
