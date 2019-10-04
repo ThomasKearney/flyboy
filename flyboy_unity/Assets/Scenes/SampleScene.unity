@@ -178,16 +178,16 @@ MonoBehaviour:
   animator: {fileID: 18682144}
   speed: 0
   playerCollider: {fileID: 18682145}
-  jumpForce: 5
+  jumpForce: 10
   isGrounded: 0
-  groundCheck: {fileID: 834598501}
-  checkRadius: 0
+  groundCheck: {fileID: 1206194838}
+  checkRadius: 1
   whatIsGround:
     serializedVersion: 2
     m_Bits: 256
-  softFallDrag: 10
-  softFallHorizontalDrag: 2
-  liftForce: 0.02
+  softFallDrag: 5
+  softFallHorizontalDrag: 5
+  liftForce: 10
 --- !u!212 &18682142
 SpriteRenderer:
   m_ObjectHideFlags: 0

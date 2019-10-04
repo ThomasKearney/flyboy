@@ -39,12 +39,16 @@ public class PlayerController : MonoBehaviour
     public float liftForce;
     private bool flyUp;
     private bool flyDown;
+    public float rotationSpeed;
+
+    private Vector3 defaultPostition;
 
     private void Start()
     {
         speed = speedInput;
         rigidBody = GetComponent<Rigidbody2D>();
         distToGround = playerCollider.bounds.extents.y;
+        defaultPostition = rigidBody.transform.position;   
     }
 
     private void Update()
@@ -67,6 +71,8 @@ public class PlayerController : MonoBehaviour
         AnimationController();
 
         FlyController();
+
+        DebugTools();
 
     }
 
@@ -149,7 +155,7 @@ public class PlayerController : MonoBehaviour
             // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
             float horizontalSpeed = rigidBody.velocity.x;
             horizontalSpeed = Mathf.Abs(horizontalSpeed);
-            float lift = horizontalSpeed * liftForce;
+            float lift = (horizontalSpeed * liftForce) / 100;
 
             // Apply life force
             rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
@@ -216,5 +222,26 @@ public class PlayerController : MonoBehaviour
         Vector2 leftCorner = new Vector2(transform.position.x - 0.5f, transform.position.y - 0.5f);
         Vector2 rightCorner = new Vector2(transform.position.x + 0.5f, transform.position.y - 0.73f);
         isGrounded = Physics2D.OverlapArea(leftCorner, rightCorner, whatIsGround);
+    }
+
+    public bool rotate;
+    void DebugTools()
+    {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            // Send player back to default position
+            rigidBody.transform.position = defaultPostition;
+            flying = false;
+            rigidBody.velocity = new Vector2(0,0);
+        }
+
+        if (Input.GetKeyDown(KeyCode.K)) { rotate = true;   }
+        if (Input.GetKeyUp(KeyCode.K)) { rotate = false;  }
+
+        if (rotate)
+        {
+            // Rotate player (hopefully)
+            rigidBody.transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
+        }
     }
 }
