@@ -174,20 +174,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 51b12cdb1a420134ba1125c004e051b7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speedInput: 10
   animator: {fileID: 18682144}
-  speed: 0
   playerCollider: {fileID: 18682145}
-  jumpForce: 10
-  isGrounded: 0
   groundCheck: {fileID: 1206194838}
   checkRadius: 1
   whatIsGround:
     serializedVersion: 2
     m_Bits: 256
-  softFallDrag: 5
-  softFallHorizontalDrag: 5
-  liftForce: 10
+  flyDown: 0
+  rotationSpeed: 50
+  angleOfAttack: 0
+  rotate: 0
 --- !u!212 &18682142
 SpriteRenderer:
   m_ObjectHideFlags: 0
