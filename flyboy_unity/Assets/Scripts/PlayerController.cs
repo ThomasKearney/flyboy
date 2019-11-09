@@ -11,13 +11,15 @@ public class PlayerController : MonoBehaviour
     private float speed;
     public CapsuleCollider2D playerCollider;
     private float moveInput;
+    private float idleDrag = 0;
+    private float flyingDrag = 0;
 
     private Quaternion uprightRotation;
 
     // JUMPING
     float fallMultiplier = 2.5f;
     float lowJumpMultiplier = 2f;
-    private float jumpForce = 10;
+    private float jumpForce = 5;
 
     private Rigidbody2D rigidBody;
 
@@ -43,6 +45,8 @@ public class PlayerController : MonoBehaviour
     public bool flyDown;
     public float rotationSpeed;
     public float angleOfAttack;
+    private Vector3 upRotation;
+    private Vector3 downRotation;
 
     private Vector3 defaultPostition;
 
@@ -83,7 +87,7 @@ public class PlayerController : MonoBehaviour
     private void SoftLandController()
     {
         // If we are falling, not on the ground, and are holding a jump button then increase our drag
-        if(rigidBody.velocity.y < 0 && !isGrounded && (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Space)))
+        if (rigidBody.velocity.y < 0 && !isGrounded && (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.Space)))
         {
             rigidBody.drag = softFallDrag;
             speed = speedInput / softFallHorizontalDrag;
@@ -116,7 +120,7 @@ public class PlayerController : MonoBehaviour
                 rigidBody.velocity += Vector2.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.deltaTime;
             }
         }
-        
+
 
 
 
@@ -125,13 +129,13 @@ public class PlayerController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             // Add force if we're on the ground
-            if (isGrounded){ rigidBody.velocity = Vector2.up * jumpForce; }
+            if (isGrounded) { rigidBody.velocity = Vector2.up * jumpForce; }
             jumping = true;
         }
 
         // Set our jumping state to false when spacebar is let go
-        if (Input.GetKeyUp(KeyCode.Space)) 
-        { 
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
             jumping = false;
         }
 
@@ -143,8 +147,8 @@ public class PlayerController : MonoBehaviour
         // Start a timer to see how long we've been jumping for
         if (jumping) { jumpHeldTime += Time.deltaTime; }
 
-        // If we jump for over half a second then start flying state
-        if (jumpHeldTime > 0.45) { flying = true; }
+        // If we hold jump then start flying state
+        if (jumpHeldTime > 0.1) { flying = true; }
 
         // Reset when player hits the ground or lets go of space
         if (isGrounded || Input.GetKeyUp(KeyCode.Space))
@@ -152,13 +156,15 @@ public class PlayerController : MonoBehaviour
             // Reset the time that the player has been holding jump to 0
             jumpHeldTime = 0;
             // If we were flying then rotate the player back to an upright position
-            if (flying) { rigidBody.transform.rotation = uprightRotation; Debug.Log("landed"); }
+            if (flying) { rigidBody.transform.rotation = uprightRotation; }
             flying = false;
         }
 
-        
-        if(flying)
+
+        if (flying)
         {
+            // Fix drag
+            rigidBody.drag = flyingDrag;
             // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
             float horizontalSpeed = rigidBody.velocity.x;
             horizontalSpeed = Mathf.Abs(horizontalSpeed);
@@ -169,15 +175,18 @@ public class PlayerController : MonoBehaviour
             // Apply life force
             rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
 
-            if (Input.GetKeyDown(KeyCode.W)) { flyUp   = true; }
-            if (Input.GetKeyUp(KeyCode.W))   { flyUp   = false; }
-            if (Input.GetKeyDown(KeyCode.S)) { flyDown = true; }
-            if (Input.GetKeyUp(KeyCode.S))   { flyDown = false; }
+            if (Input.GetKey(KeyCode.W)) { flyUp = true; }
+            if (Input.GetKeyUp(KeyCode.W)) { flyUp = false; }
+            if (Input.GetKey(KeyCode.S)) { flyDown = true; }
+            if (Input.GetKeyUp(KeyCode.S)) { flyDown = false; }
 
+            // The way the player turns will be different depending on what direction they're facing
+            if (facingRight) { upRotation = Vector3.forward; } else { upRotation = Vector3.back; }
+            if (!facingRight) { downRotation = Vector3.back; } else { downRotation = Vector3.forward; }
 
             // Pitch body if player is flying up or down
-            if (flyUp) { rigidBody.transform.Rotate(Vector3.back * rotationSpeed * Time.deltaTime); }
-            if (flyDown) { rigidBody.transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime); }
+            if (flyUp) { rigidBody.transform.Rotate(upRotation * rotationSpeed * rigidBody.velocity * Time.deltaTime); }
+            if (flyDown) { rigidBody.transform.Rotate(downRotation * rotationSpeed * rigidBody.velocity * Time.deltaTime); }
 
         }
         else
@@ -222,8 +231,9 @@ public class PlayerController : MonoBehaviour
     {
         // Multiply a hardcoded speed by move input and set the horizontal speed to it
         // If we're flying we don't want to apply this force
-        if (!flying)
+        if (isGrounded)
         {
+            rigidBody.drag = idleDrag;
             rigidBody.velocity = new Vector2(moveInput * speed, rigidBody.velocity.y);
 
             // Turn player in the right direction
