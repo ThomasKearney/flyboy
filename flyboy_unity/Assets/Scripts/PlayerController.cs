@@ -80,7 +80,7 @@ public class PlayerController : MonoBehaviour
 
         FlyController();
 
-        DebugTools();
+        if (debugOn) { DebugTools(); }
 
     }
 
@@ -121,10 +121,6 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-
-
-
-
         // Jump if spacebar is hit
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -149,9 +145,10 @@ public class PlayerController : MonoBehaviour
 
         // If we hold jump then start flying state
         if (jumpHeldTime > 0.1) { flying = true; }
+        flying = true;
 
         // Reset when player hits the ground or lets go of space
-        if (isGrounded || Input.GetKeyUp(KeyCode.Space))
+        if ((isGrounded || Input.GetKeyUp(KeyCode.Space)) && !debugFly)
         {
             // Reset the time that the player has been holding jump to 0
             jumpHeldTime = 0;
@@ -163,31 +160,58 @@ public class PlayerController : MonoBehaviour
 
         if (flying)
         {
+            // Takes in the rotation of the player. 1 is right side up and 2 is upside down.
+            angleOfAttack = (rigidBody.transform.rotation.z);
+
             // Fix drag
-            rigidBody.drag = flyingDrag;
+            rigidBody.drag = flyingDrag + (angleOfAttack*3);
+
             // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
             float horizontalSpeed = rigidBody.velocity.x;
             horizontalSpeed = Mathf.Abs(horizontalSpeed);
-            // Takes in the rotation of the player. 1 is right side up and 2 is upside down.
-            angleOfAttack = 1 + Mathf.Abs(rigidBody.transform.rotation.z);
-            float lift = (horizontalSpeed * liftForce * angleOfAttack) / 100;
+            float lift = (horizontalSpeed * liftForce * angleOfAttack) / 10;
+            Debug.Log(angleOfAttack);
 
             // Apply life force
             rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
 
-            if (Input.GetKey(KeyCode.W)) { flyUp = true; }
-            if (Input.GetKeyUp(KeyCode.W)) { flyUp = false; }
-            if (Input.GetKey(KeyCode.S)) { flyDown = true; }
-            if (Input.GetKeyUp(KeyCode.S)) { flyDown = false; }
+            // 'W' flies down
+            if (Input.GetKey(KeyCode.W) && !flyDown)
+            {
+                flyUp   = true;
+            }
+            else
+            {
+                flyUp = false;
+            }
+
+            // 'S' flies up
+            if (Input.GetKey(KeyCode.S) && !flyUp)
+            {
+                flyDown = true;
+            }
+            else
+            {
+                flyDown = false;
+            }
 
             // The way the player turns will be different depending on what direction they're facing
-            if (facingRight) { upRotation = Vector3.forward; } else { upRotation = Vector3.back; }
-            if (!facingRight) { downRotation = Vector3.back; } else { downRotation = Vector3.forward; }
+            if (facingRight)
+            {
+                upRotation = Vector3.back;
+                downRotation = Vector3.forward;
+            }
+            else
+            {
+                upRotation = Vector3.forward;
+                downRotation = Vector3.back;
+            }
+
+            float playerVelocity = Mathf.Abs(rigidBody.velocity[0]) + Mathf.Abs(rigidBody.velocity[1]);
 
             // Pitch body if player is flying up or down
-            if (flyUp) { rigidBody.transform.Rotate(upRotation * rotationSpeed * rigidBody.velocity * Time.deltaTime); }
-            if (flyDown) { rigidBody.transform.Rotate(downRotation * rotationSpeed * rigidBody.velocity * Time.deltaTime); }
-
+            if (flyUp) { rigidBody.transform.Rotate(upRotation * rotationSpeed * playerVelocity * Time.deltaTime); }
+            if (flyDown) { rigidBody.transform.Rotate(downRotation * rotationSpeed * playerVelocity * Time.deltaTime); }
         }
         else
         {
@@ -224,7 +248,6 @@ public class PlayerController : MonoBehaviour
         animator.SetBool("flying", flying);
         animator.SetBool("flyUp", flyUp);
         animator.SetBool("flyDown", flyDown);
-
     }
 
     void WalkController()
@@ -249,6 +272,12 @@ public class PlayerController : MonoBehaviour
         isGrounded = Physics2D.OverlapArea(leftCorner, rightCorner, whatIsGround);
     }
 
+
+
+
+    // DEBUG
+    public bool debugOn;
+    private bool debugFly;
     public bool rotate;
     void DebugTools()
     {
@@ -269,5 +298,12 @@ public class PlayerController : MonoBehaviour
             // Rotate player (hopefully)
             rigidBody.transform.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
         }
+
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            if (!debugFly) { debugFly = true; }
+            else { debugFly = false; }
+        }
+        float playerVelocity = Mathf.Abs(rigidBody.velocity[0]) + Mathf.Abs(rigidBody.velocity[1]);
     }
 }
