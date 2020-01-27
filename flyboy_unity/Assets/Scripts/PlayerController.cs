@@ -11,8 +11,8 @@ public class PlayerController : MonoBehaviour
     private float speed;
     public CapsuleCollider2D playerCollider;
     private float moveInput;
-    private float idleDrag = 0;
-    private float flyingDrag = 0;
+    private float idleDrag;
+    private float flyingDrag;
 
     private Quaternion uprightRotation;
 
@@ -47,6 +47,8 @@ public class PlayerController : MonoBehaviour
     public float angleOfAttack;
     private Vector3 upRotation;
     private Vector3 downRotation;
+    private float playerDirection;
+    float liftDireciton;
 
     private Vector3 defaultPostition;
 
@@ -160,20 +162,44 @@ public class PlayerController : MonoBehaviour
 
         if (flying)
         {
-            // Takes in the rotation of the player. 1 is right side up and 2 is upside down.
-            angleOfAttack = (rigidBody.transform.rotation.z);
+            angleOfAttack = (GetAngleOfAttack() + 1) / 10;
+
+            liftDireciton = playerDirection - 90;
+            if (liftDireciton < 0)
+            {
+                liftDireciton += 360;
+            }
+
+            //Convert to how trig actually works (flip and then turn 90 degrees clockwise)
+            liftDireciton -= 450;
+            if (liftDireciton < 0)
+            {
+                liftDireciton += 360;
+            }
+
+            // Go back to radians
+            liftDireciton *= Mathf.Deg2Rad;
+
+            // Create a coeficient so x + y is always one. Then we'll apply that to the lift
+            float xRad = Mathf.Cos(liftDireciton);
+            float yRad = Mathf.Sin(liftDireciton);
+            float xCoef = xRad / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
+            float yCoef = yRad / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
 
             // Fix drag
-            rigidBody.drag = flyingDrag + (angleOfAttack*3);
+            //rigidBody.drag = flyingDrag + (Mathf.Abs(angleOfAttack)*3);
 
             // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
             float horizontalSpeed = rigidBody.velocity.x;
             horizontalSpeed = Mathf.Abs(horizontalSpeed);
-            float lift = (horizontalSpeed * liftForce * angleOfAttack) / 10;
-            Debug.Log(angleOfAttack);
+            float lift = (horizontalSpeed * liftForce * angleOfAttack) / 100;
+            float xLift = lift * xCoef;
+            float yLift = lift * yCoef;
+            Debug.Log("\n xLift: " + xLift + "\n yLift: " + yLift + "\n Lift:  " + lift
+                + "\n hSpeed: " + horizontalSpeed + "\n liftForce: " + liftForce + "\n AOA: " + angleOfAttack);
 
-            // Apply life force
-            rigidBody.velocity = new Vector2(rigidBody.velocity.x, rigidBody.velocity.y + lift);
+            //Apply life force
+            rigidBody.velocity = new Vector2(rigidBody.velocity.x + yLift, rigidBody.velocity.y + xLift);
 
             // 'W' flies down
             if (Input.GetKey(KeyCode.W) && !flyDown)
@@ -212,11 +238,14 @@ public class PlayerController : MonoBehaviour
             // Pitch body if player is flying up or down
             if (flyUp) { rigidBody.transform.Rotate(upRotation * rotationSpeed * playerVelocity * Time.deltaTime); }
             if (flyDown) { rigidBody.transform.Rotate(downRotation * rotationSpeed * playerVelocity * Time.deltaTime); }
+
         }
         else
         {
             flyDown = flyUp = false;
         }
+
+
 
     }
 
@@ -272,7 +301,82 @@ public class PlayerController : MonoBehaviour
         isGrounded = Physics2D.OverlapArea(leftCorner, rightCorner, whatIsGround);
     }
 
+    float GetPlayerDirection()
+    {
+        // Get the direction in radians
+        float dir = Mathf.Atan2(rigidBody.velocity.y, rigidBody.velocity.x);
+        // Convert to degrees
+        dir *= (180 / Mathf.PI);
+        // Right -> Up -> Left is 0 to 180 and Right -> Down -> Left is 0 to -180
+        // Lets make it like a clock where up is 0/360
+        if (dir > 0)
+        {
+            dir = 90 - dir;
+            if (dir < 0)
+            {
+                dir = 360 + dir;
+            }
+        }
+        else
+        {
+            dir = Mathf.Abs(dir);
+            dir += 90;
+        }
+        playerDirection = dir;
+        return dir;
+    }
 
+    float GetAngleOfAttack()
+    {
+
+        // Takes in the rotation of the player. 1 is right side up and 2 is upside down.
+        float aoa = (rigidBody.transform.rotation.z);
+        // Put it in terms of 0 - 360 degrees since roation is 0 - 100
+        aoa *= 1.8f;
+        // Everything fips when we face left so lets flip it back
+        if(!facingRight)
+        {
+            aoa -= 180;
+            if (aoa < 0)
+            {
+                aoa += 360;
+            }
+        }
+        if (aoa < 0)
+        {
+            aoa = 90 + Mathf.Abs(aoa);
+        }
+        else
+        {
+            aoa = 90 - aoa;
+            if (aoa < 0)
+            {
+                aoa = 360 + aoa;
+            }
+        }
+        // Change it so it's in reference to the direction we're going
+        float dir = GetPlayerDirection();
+        // If 360 is 'in between' the two headings then we'll have to do some extra math.
+        if (dir <=90 && aoa >= 270)
+        {
+            aoa = 360 + dir - aoa;
+        }
+        else if(dir >= 270 && aoa <= 90)
+        {
+            aoa = dir - 360 - aoa;
+        }
+        else
+        {
+            aoa = dir - aoa;
+        }
+        if (!facingRight)
+        {
+            aoa *= -1;
+        }
+
+        return aoa;
+    }
+    
 
 
     // DEBUG
@@ -304,6 +408,5 @@ public class PlayerController : MonoBehaviour
             if (!debugFly) { debugFly = true; }
             else { debugFly = false; }
         }
-        float playerVelocity = Mathf.Abs(rigidBody.velocity[0]) + Mathf.Abs(rigidBody.velocity[1]);
     }
 }
