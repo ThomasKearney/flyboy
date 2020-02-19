@@ -12,7 +12,6 @@ public class PlayerController : MonoBehaviour
     public CapsuleCollider2D playerCollider;
     private float moveInput;
     private float idleDrag;
-    private float flyingDrag;
 
     private Quaternion uprightRotation;
 
@@ -40,11 +39,11 @@ public class PlayerController : MonoBehaviour
     private float jumpHeldTime;
     private bool jumping;
     private bool flying;
-    private float liftForce = 2;
     private bool flyUp;
     public bool flyDown;
     public float rotationSpeed;
     public float angleOfAttack;
+    public float debug;
     private Vector3 upRotation;
     private Vector3 downRotation;
     private float playerDirection;
@@ -146,30 +145,53 @@ public class PlayerController : MonoBehaviour
         if (jumping) { jumpHeldTime += Time.deltaTime; }
 
         // If we hold jump then start flying state
-        if (jumpHeldTime > 0.1) { flying = true; }
-        flying = true;
-
+        if (jumpHeldTime > 0.1)
+        {
+            flying = true;
+        }
+        
         // Reset when player hits the ground or lets go of space
         if ((isGrounded || Input.GetKeyUp(KeyCode.Space)) && !debugFly)
         {
             // Reset the time that the player has been holding jump to 0
             jumpHeldTime = 0;
             // If we were flying then rotate the player back to an upright position
-            if (flying) { rigidBody.transform.rotation = uprightRotation; }
+            if (flying)
+            {
+                rigidBody.transform.rotation = uprightRotation;
+            }
             flying = false;
         }
 
 
         if (flying)
         {
-            angleOfAttack = (GetAngleOfAttack() + 1) / 10;
+            angleOfAttack = GetAngleOfAttack();
+            // Linear paramters to effect lift and drag
+            float liftForce = 0.0015f;
+            float flyingDrag = 0.0148f;
+
+            //after our angle of attack is so high we'll stop getting lift
+            float liftFromAOA;
+            if(angleOfAttack > 41)
+            {
+                liftFromAOA = 0;
+            }
+            else if(angleOfAttack < -41)
+            {
+                liftFromAOA = 0;
+            }
+            else
+            {
+                liftFromAOA = angleOfAttack;
+            }
 
             liftDireciton = playerDirection - 90;
             if (liftDireciton < 0)
             {
                 liftDireciton += 360;
             }
-
+            debug = liftFromAOA;
             //Convert to how trig actually works (flip and then turn 90 degrees clockwise)
             liftDireciton -= 450;
             if (liftDireciton < 0)
@@ -183,24 +205,20 @@ public class PlayerController : MonoBehaviour
             // Create a coeficient so x + y is always one. Then we'll apply that to the lift
             float xRad = Mathf.Cos(liftDireciton);
             float yRad = Mathf.Sin(liftDireciton);
-            float xCoef = xRad / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
-            float yCoef = yRad / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
+            float xCoef = Mathf.Abs(xRad) / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
+            float yCoef = Mathf.Abs(yRad) / (Mathf.Abs(xRad) + Mathf.Abs(yRad));
 
             // Fix drag
-            //rigidBody.drag = flyingDrag + (Mathf.Abs(angleOfAttack)*3);
+            rigidBody.drag = flyingDrag * Mathf.Abs(angleOfAttack);
 
-            // Our lift force is going to be based on the horizontal speed multiplied by a hardcoded lift coeficient
-            float horizontalSpeed = rigidBody.velocity.x;
-            horizontalSpeed = Mathf.Abs(horizontalSpeed);
-            float lift = (horizontalSpeed * liftForce * angleOfAttack) / 100;
+            // Our lift force is going to be based on the speed multiplied by a hardcoded lift coeficient
+            float playerVelocity = Mathf.Abs(rigidBody.velocity[0]) + Mathf.Abs(rigidBody.velocity[1]);
+            float lift = playerVelocity * liftFromAOA * liftForce;
             float xLift = lift * xCoef;
             float yLift = lift * yCoef;
-            Debug.Log("\n xLift: " + xLift + "\n yLift: " + yLift + "\n Lift:  " + lift
-                + "\n hSpeed: " + horizontalSpeed + "\n liftForce: " + liftForce + "\n AOA: " + angleOfAttack);
 
             //Apply life force
-            rigidBody.velocity = new Vector2(rigidBody.velocity.x + yLift, rigidBody.velocity.y + xLift);
-
+            rigidBody.velocity = new Vector2(rigidBody.velocity.x + xLift, rigidBody.velocity.y + yLift);
             // 'W' flies down
             if (Input.GetKey(KeyCode.W) && !flyDown)
             {
@@ -232,8 +250,6 @@ public class PlayerController : MonoBehaviour
                 upRotation = Vector3.forward;
                 downRotation = Vector3.back;
             }
-
-            float playerVelocity = Mathf.Abs(rigidBody.velocity[0]) + Mathf.Abs(rigidBody.velocity[1]);
 
             // Pitch body if player is flying up or down
             if (flyUp) { rigidBody.transform.Rotate(upRotation * rotationSpeed * playerVelocity * Time.deltaTime); }
@@ -330,11 +346,10 @@ public class PlayerController : MonoBehaviour
     {
 
         // Takes in the rotation of the player. 1 is right side up and 2 is upside down.
-        float aoa = (rigidBody.transform.rotation.z);
-        // Put it in terms of 0 - 360 degrees since roation is 0 - 100
-        aoa *= 1.8f;
+        float aoa = (rigidBody.transform.rotation.eulerAngles.z);
+
         // Everything fips when we face left so lets flip it back
-        if(!facingRight)
+        if (!facingRight)
         {
             aoa -= 180;
             if (aoa < 0)
@@ -342,20 +357,24 @@ public class PlayerController : MonoBehaviour
                 aoa += 360;
             }
         }
-        if (aoa < 0)
+        
+        // When we nose down the angle goes from 360 to 361 rather than 1
+        if (aoa > 360)
         {
-            aoa = 90 + Mathf.Abs(aoa);
+            aoa -= 360;
         }
-        else
+
+        // Flip it and turn it so 360 is up 270 is left
+        aoa = 360 - aoa;
+        aoa += 90;
+        if (aoa > 360)
         {
-            aoa = 90 - aoa;
-            if (aoa < 0)
-            {
-                aoa = 360 + aoa;
-            }
+            aoa -= 360;
         }
+        
         // Change it so it's in reference to the direction we're going
         float dir = GetPlayerDirection();
+        
         // If 360 is 'in between' the two headings then we'll have to do some extra math.
         if (dir <=90 && aoa >= 270)
         {
@@ -373,7 +392,6 @@ public class PlayerController : MonoBehaviour
         {
             aoa *= -1;
         }
-
         return aoa;
     }
     
